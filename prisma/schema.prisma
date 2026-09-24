@@ -1,0 +1,80 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Anagrafica pazienti
+model Patient {
+  id             String   @id @default(cuid())
+  nome           String
+  cognome        String
+  codiceFiscale  String?
+  email          String?
+  telefono       String?
+  indirizzo      String?
+  tariffaSeduta  Decimal  @db.Decimal(10, 2)
+  note           String?
+  attivo         Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  invoices Invoice[]
+
+  @@index([cognome, nome])
+}
+
+// Fatture emesse ai pazienti
+model Invoice {
+  id             String    @id @default(cuid())
+  numero         String    @unique
+  anno           Int
+  progressivo    Int
+  data           DateTime  @default(now())
+  descrizione    String
+  importo        Decimal   @db.Decimal(10, 2)
+  pagata         Boolean   @default(false)
+  dataPagamento  DateTime?
+  metodoPagamento String?
+  inviataEmail   Boolean   @default(false)
+  dataInvioEmail DateTime?
+  note           String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  patientId String
+  patient   Patient @relation(fields: [patientId], references: [id], onDelete: Restrict)
+
+  @@index([anno, progressivo])
+  @@index([patientId])
+}
+
+// Impostazioni dello studio: un'unica riga (singleton) con i dati fiscali
+// e i parametri per il calcolo del netto in regime forfettario.
+model StudioSettings {
+  id     Int    @id @default(1)
+  nomeStudio             String  @default("Studio di Psicologia")
+  nomePsicologa          String  @default("")
+  indirizzoStudio        String  @default("")
+  partitaIva             String  @default("")
+  codiceFiscalePsicologa String  @default("")
+  iban                   String  @default("")
+  numeroAlboIscrizione   String  @default("")
+
+  // Parametri per il calcolo del reddito netto in regime forfettario.
+  // coefficienteRedditivita: quota del fatturato incassato considerata reddito imponibile
+  //   (per l'attività di psicologo, codice ATECO 86.90.30, il coefficiente standard e' 0.78)
+  // aliquotaImposta: aliquota dell'imposta sostitutiva (15% ordinaria, 5% per i primi 5 anni
+  //   in presenza dei requisiti "start-up")
+  // aliquotaContributi: aliquota dei contributi previdenziali (es. Cassa ENPAP) calcolata
+  //   sul reddito imponibile; i contributi versati sono deducibili dall'imponibile
+  coefficienteRedditivita Float @default(0.78)
+  aliquotaImposta         Float @default(0.15)
+  aliquotaContributi      Float @default(0.0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}

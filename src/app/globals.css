@@ -1,0 +1,60 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  @apply bg-brand-50 text-slate-800 antialiased;
+}
+
+::selection {
+  @apply bg-coral-200;
+}
+
+.card {
+  @apply bg-white rounded-2xl shadow-soft border border-brand-100 p-6;
+}
+
+.btn {
+  @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors disabled:opacity-50 disabled:pointer-events-none;
+}
+
+.btn-primary {
+  @apply btn bg-brand-600 text-white hover:bg-brand-700;
+}
+
+.btn-secondary {
+  @apply btn bg-white text-brand-700 border border-brand-200 hover:bg-brand-50;
+}
+
+.btn-danger {
+  @apply btn bg-coral-500 text-white hover:bg-coral-600;
+}
+
+.btn-ghost {
+  @apply btn text-slate-600 hover:bg-slate-100;
+}
+
+.input {
+  @apply w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-400 focus:border-brand-400;
+}
+
+.label {
+  @apply block text-sm font-medium text-slate-600 mb-1.5;
+}
+
+.badge {
+  @apply inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold;
+}
+
+.badge-success {
+  @apply badge bg-mint-100 text-mint-800;
+}
+
+.badge-warning {
+  @apply badge bg-sunny-100 text-sunny-800;
+}
