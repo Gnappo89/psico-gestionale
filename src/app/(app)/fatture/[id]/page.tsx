@@ -6,10 +6,17 @@ import {
   markUnpaidAction,
   deleteInvoiceAction,
   sendInvoiceEmailAction,
+  inviaInConservazioneAction,
 } from "../actions";
 import { ConfirmSubmitButton } from "@/components/ConfirmSubmitButton";
 import { formatCurrency, formatDate, formatDateInput, toNumber } from "@/lib/utils";
-import { HiOutlineDownload, HiOutlineMail, HiOutlineArrowLeft } from "react-icons/hi";
+import { isConservazioneConfigured } from "@/lib/conservazione";
+import {
+  HiOutlineDownload,
+  HiOutlineMail,
+  HiOutlineArrowLeft,
+  HiOutlineArchive,
+} from "react-icons/hi";
 
 export const dynamic = "force-dynamic";
 
@@ -27,10 +34,13 @@ export default async function FatturaDetailPage({
 
   if (!invoice) notFound();
 
+  const conservazioneOk = isConservazioneConfigured();
+
   const markPaid = markPaidAction.bind(null, invoice.id);
   const markUnpaid = markUnpaidAction.bind(null, invoice.id);
   const del = deleteInvoiceAction.bind(null, invoice.id);
   const sendEmail = sendInvoiceEmailAction.bind(null, invoice.id);
+  const inviaConservazione = inviaInConservazioneAction.bind(null, invoice.id);
 
   return (
     <div className="py-6 md:py-8 space-y-6 max-w-2xl">
@@ -60,10 +70,20 @@ export default async function FatturaDetailPage({
             </h1>
             <p className="text-sm text-slate-400 mt-0.5">Emessa il {formatDate(invoice.data)}</p>
           </div>
-          <span className={invoice.pagata ? "badge-success" : "badge-warning"}>
-            {invoice.pagata ? "Pagata" : "Da pagare"}
-          </span>
+          <div className="flex flex-col items-end gap-2">
+            <span className={invoice.pagata ? "badge-success" : "badge-warning"}>
+              {invoice.pagata ? "Pagata" : "Da pagare"}
+            </span>
+            {invoice.importata && <span className="badge-neutral">Fattura storica</span>}
+          </div>
         </div>
+
+        {invoice.importata && (
+          <p className="text-xs text-slate-400 bg-slate-50 border border-slate-100 rounded-lg px-3 py-2 mb-4">
+            Importata da un altro gestionale, solo a fini statistici: conta nei report ma non può
+            essere rigenerata dal modello dell&apos;app né inviata via email da qui.
+          </p>
+        )}
 
         <p className="text-sm text-slate-600 mb-4">{invoice.descrizione}</p>
         <p className="text-3xl font-bold text-brand-700 mb-6">
@@ -71,26 +91,39 @@ export default async function FatturaDetailPage({
         </p>
 
         <div className="flex flex-wrap gap-2">
-          <a
-            href={`/api/fatture/${invoice.id}/pdf`}
-            target="_blank"
-            rel="noreferrer"
-            className="btn-secondary"
-          >
-            <HiOutlineDownload className="h-4 w-4" /> PDF / Stampa
-          </a>
+          {invoice.importata ? (
+            <a
+              href={`/api/fatture/${invoice.id}/pdf-originale`}
+              target="_blank"
+              rel="noreferrer"
+              className="btn-secondary"
+            >
+              <HiOutlineDownload className="h-4 w-4" /> PDF originale
+            </a>
+          ) : (
+            <>
+              <a
+                href={`/api/fatture/${invoice.id}/pdf`}
+                target="_blank"
+                rel="noreferrer"
+                className="btn-secondary"
+              >
+                <HiOutlineDownload className="h-4 w-4" /> PDF / Stampa
+              </a>
 
-          {invoice.patient.email && (
-            <form action={sendEmail}>
-              <button type="submit" className="btn-secondary">
-                <HiOutlineMail className="h-4 w-4" />
-                {invoice.inviataEmail ? "Invia di nuovo via email" : "Invia via email"}
-              </button>
-            </form>
+              {invoice.patient.email && (
+                <form action={sendEmail}>
+                  <button type="submit" className="btn-secondary">
+                    <HiOutlineMail className="h-4 w-4" />
+                    {invoice.inviataEmail ? "Invia di nuovo via email" : "Invia via email"}
+                  </button>
+                </form>
+              )}
+            </>
           )}
         </div>
 
-        {invoice.inviataEmail && invoice.dataInvioEmail && (
+        {!invoice.importata && invoice.inviataEmail && invoice.dataInvioEmail && (
           <p className="text-xs text-slate-400 mt-3">
             Ultimo invio email: {formatDate(invoice.dataInvioEmail)}
           </p>
@@ -146,6 +179,69 @@ export default async function FatturaDetailPage({
           </form>
         )}
       </div>
+
+      {invoice.pagata && (
+        <div className="card">
+          <div className="flex items-center gap-2 mb-4">
+            <HiOutlineArchive className="h-5 w-5 text-brand-500" />
+            <h2 className="font-bold text-slate-800">Conservazione digitale</h2>
+          </div>
+
+          <div className="flex items-center gap-2 mb-3">
+            {invoice.statoConservazione === "CONSERVATA" && (
+              <span className="badge-success">Conservata</span>
+            )}
+            {invoice.statoConservazione === "ERRORE" && (
+              <span className="badge-danger">Errore</span>
+            )}
+            {invoice.statoConservazione === "IN_CORSO" && (
+              <span className="badge-warning">Invio in corso</span>
+            )}
+            {invoice.statoConservazione === "NON_INVIATA" && (
+              <span className="badge-neutral">Non inviata</span>
+            )}
+          </div>
+
+          {invoice.statoConservazione === "CONSERVATA" && (
+            <p className="text-sm text-slate-600 mb-4">
+              Inviata in conservazione
+              {invoice.dataInvioConservazione ? ` il ${formatDate(invoice.dataInvioConservazione)}` : ""}.
+              {invoice.identificativoConservazione && (
+                <>
+                  {" "}
+                  Identificativo (IPdA):{" "}
+                  <span className="font-mono text-xs text-slate-500">
+                    {invoice.identificativoConservazione}
+                  </span>
+                </>
+              )}
+            </p>
+          )}
+
+          {invoice.statoConservazione === "ERRORE" && invoice.erroreConservazione && (
+            <p className="text-sm text-coral-700 bg-coral-50 border border-coral-200 rounded-xl px-4 py-3 mb-4">
+              {invoice.erroreConservazione}
+            </p>
+          )}
+
+          {!conservazioneOk && (
+            <p className="text-xs text-slate-400 mb-4">
+              La conservazione digitale non è ancora configurata (vedi Impostazioni).
+            </p>
+          )}
+
+          {invoice.statoConservazione !== "CONSERVATA" && (
+            <form action={inviaConservazione}>
+              <button type="submit" className="btn-secondary">
+                <HiOutlineArchive className="h-4 w-4" />
+                {invoice.statoConservazione === "ERRORE"
+                  ? "Riprova invio in conservazione"
+                  : "Invia in conservazione"}
+              </button>
+            </form>
+          )}
+        </div>
+      )}
 
       <form action={del} className="flex justify-end">
         <ConfirmSubmitButton confirmMessage="Vuoi davvero eliminare questa fattura? L'operazione non è reversibile.">

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { formatCurrency, formatDate, toNumber } from "@/lib/utils";
-import { HiPlus } from "react-icons/hi";
+import { HiPlus, HiOutlineArchive, HiOutlineUpload } from "react-icons/hi";
 
 export const dynamic = "force-dynamic";
 
@@ -44,9 +44,14 @@ export default async function FatturePage({
             {fatture.length} fatture · totale {formatCurrency(totale)}
           </p>
         </div>
-        <Link href="/fatture/nuova" className="btn-primary">
-          <HiPlus className="h-4 w-4" /> Nuova fattura
-        </Link>
+        <div className="flex gap-2">
+          <Link href="/fatture/importa" className="btn-secondary">
+            <HiOutlineUpload className="h-4 w-4" /> Importa storiche
+          </Link>
+          <Link href="/fatture/nuova" className="btn-primary">
+            <HiPlus className="h-4 w-4" /> Nuova fattura
+          </Link>
+        </div>
       </div>
 
       <form className="card flex flex-wrap gap-3 items-center" method="get">
@@ -86,9 +91,22 @@ export default async function FatturePage({
                   </p>
                   <p className="text-xs text-slate-400">
                     Fattura n. {f.numero} · {formatDate(f.data)}
+                    {f.importata ? " · storica" : ""}
                   </p>
                 </div>
                 <div className="flex items-center gap-3 shrink-0">
+                  {f.statoConservazione === "CONSERVATA" && (
+                    <HiOutlineArchive
+                      className="h-4 w-4 text-mint-600"
+                      title="Fattura in conservazione digitale"
+                    />
+                  )}
+                  {f.statoConservazione === "ERRORE" && (
+                    <HiOutlineArchive
+                      className="h-4 w-4 text-coral-500"
+                      title="Errore nell'invio in conservazione"
+                    />
+                  )}
                   <span className="font-semibold text-sm text-slate-700">
                     {formatCurrency(toNumber(f.importo))}
                   </span>

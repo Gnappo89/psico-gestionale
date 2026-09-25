@@ -42,6 +42,24 @@ model Invoice {
   inviataEmail   Boolean   @default(false)
   dataInvioEmail DateTime?
   note           String?
+
+  // Conservazione digitale a norma (es. InfoCert LegalDoc): una fattura
+  // pagata viene proposta per l'invio in conservazione. identificativoConservazione
+  // e' il riferimento restituito dal sistema di conservazione (IPdA) una volta
+  // che il documento e' stato acquisito definitivamente.
+  statoConservazione     StatoConservazione @default(NON_INVIATA)
+  dataInvioConservazione DateTime?
+  identificativoConservazione String?
+  erroreConservazione    String?
+
+  // Fatture "storiche" importate da altri gestionali (PDF con grafica propria),
+  // caricate solo a fini statistici: non generano un nuovo PDF dal template
+  // dell'app e non vengono proposte per l'invio via email. pdfOriginale
+  // conserva il file PDF così come caricato, per consultazione.
+  importata            Boolean @default(false)
+  pdfOriginale         Bytes?
+  pdfOriginaleNomeFile String?
+
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 
@@ -50,6 +68,32 @@ model Invoice {
 
   @@index([anno, progressivo])
   @@index([patientId])
+}
+
+// Fatture storiche caricate in attesa di revisione: il PDF viene analizzato
+// automaticamente per suggerire i dati (numero, data, importo, paziente), ma
+// l'utente deve sempre confermare/correggere prima che diventi una vera
+// Invoice, dato che i PDF provengono da gestionali diversi con grafiche
+// molto diverse tra loro e l'estrazione automatica è solo un aiuto.
+model ImportazioneStaging {
+  id                String    @id @default(cuid())
+  nomeFileOriginale String
+  pdfBytes          Bytes
+  testoEstratto     String?
+
+  suggerimentoNumero   String?
+  suggerimentoData     DateTime?
+  suggerimentoImporto  Decimal?  @db.Decimal(10, 2)
+  suggerimentoPaziente String?
+
+  createdAt DateTime @default(now())
+}
+
+enum StatoConservazione {
+  NON_INVIATA
+  IN_CORSO
+  CONSERVATA
+  ERRORE
 }
 
 // Impostazioni dello studio: un'unica riga (singleton) con i dati fiscali
@@ -74,6 +118,13 @@ model StudioSettings {
   coefficienteRedditivita Float @default(0.78)
   aliquotaImposta         Float @default(0.15)
   aliquotaContributi      Float @default(0.0)
+
+  // Conservazione digitale a norma (InfoCert LegalDoc). Le credenziali vere e
+  // proprie (URL, chiave API) restano nelle variabili d'ambiente, non qui:
+  // questi sono solo i parametri "di business" che l'utente può cambiare
+  // dall'interfaccia.
+  conservazioneAbilitata      Boolean @default(false)
+  conservazioneClasseDocumentale String @default("ll_lg_fattu")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
