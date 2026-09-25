@@ -4,14 +4,22 @@ import { prisma } from "@/lib/db";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { analizzaFatturaPdf } from "@/lib/pdfExtract";
+import { sanitizeForDb } from "@/lib/utils";
 
 function parseDecimal(value: FormDataEntryValue | null): number {
   const n = parseFloat(String(value || "0").replace(",", "."));
   return Number.isFinite(n) ? n : 0;
 }
 
+// I campi di testo qui sotto possono arrivare precompilati da un suggerimento
+// letto dal PDF (numero, nome paziente, ecc.): sanitizeForDb toglie eventuali
+// byte non validi per Postgres anche se l'utente conferma senza modificarli.
+function cleanText(value: FormDataEntryValue | null): string {
+  return sanitizeForDb(String(value ?? "")).trim();
+}
+
 function emptyToNull(value: FormDataEntryValue | null): string | null {
-  const str = String(value ?? "").trim();
+  const str = cleanText(value);
   return str.length ? str : null;
 }
 
@@ -30,13 +38,13 @@ export async function caricaFattureStoricheAction(formData: FormData) {
 
     await prisma.importazioneStaging.create({
       data: {
-        nomeFileOriginale: file.name || "fattura.pdf",
+        nomeFileOriginale: sanitizeForDb(file.name || "fattura.pdf"),
         pdfBytes: buffer,
-        testoEstratto: analisi.testo || null,
-        suggerimentoNumero: analisi.numero ?? null,
+        testoEstratto: analisi.testo ? sanitizeForDb(analisi.testo) : null,
+        suggerimentoNumero: analisi.numero ? sanitizeForDb(analisi.numero) : null,
         suggerimentoData: analisi.data ?? null,
         suggerimentoImporto: analisi.importo ?? null,
-        suggerimentoPaziente: analisi.paziente ?? null,
+        suggerimentoPaziente: analisi.paziente ? sanitizeForDb(analisi.paziente) : null,
       },
     });
   }
@@ -68,8 +76,8 @@ export async function confermaImportazioneAction(stagingId: string, formData: Fo
 
   let patientId: string;
   if (patientMode === "nuovo") {
-    const nome = String(formData.get("nuovoNome") || "").trim();
-    const cognome = String(formData.get("nuovoCognome") || "").trim();
+    const nome = cleanText(formData.get("nuovoNome"));
+    const cognome = cleanText(formData.get("nuovoCognome"));
     if (!nome || !cognome) {
       redirect(
         `/fatture/importa/${stagingId}?errore=${encodeURIComponent(
@@ -98,7 +106,7 @@ export async function confermaImportazioneAction(stagingId: string, formData: Fo
     }
   }
 
-  const numero = String(formData.get("numero") || "").trim();
+  const numero = cleanText(formData.get("numero"));
   if (!numero) {
     redirect(
       `/fatture/importa/${stagingId}?errore=${encodeURIComponent(
@@ -110,8 +118,7 @@ export async function confermaImportazioneAction(stagingId: string, formData: Fo
   const dataStr = String(formData.get("data") || "");
   const data = dataStr ? new Date(dataStr) : new Date();
   const anno = data.getFullYear();
-  const descrizione =
-    String(formData.get("descrizione") || "").trim() || "Prestazione professionale";
+  const descrizione = cleanText(formData.get("descrizione")) || "Prestazione professionale";
   const pagata = formData.get("pagata") === "on";
   const dataPagamentoStr = String(formData.get("dataPagamento") || "");
   const dataPagamento = pagata ? (dataPagamentoStr ? new Date(dataPagamentoStr) : data) : null;

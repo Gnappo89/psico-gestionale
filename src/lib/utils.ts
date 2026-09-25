@@ -35,3 +35,16 @@ export function toNumber(value: unknown): number {
 export function initials(nome: string, cognome: string): string {
   return `${nome.charAt(0)}${cognome.charAt(0)}`.toUpperCase();
 }
+
+/**
+ * Rimuove il byte NUL (0x00) e altri caratteri di controllo non stampabili
+ * da una stringa prima di salvarla nel database: Postgres rifiuta il byte
+ * 0x00 nei campi di testo con l'errore "invalid byte sequence for encoding
+ * UTF8". Può capitare leggendo il testo di PDF con codifiche dei font
+ * particolari (es. font CID a doppio byte), quindi va applicato a qualsiasi
+ * testo che potrebbe arrivare, anche indirettamente, da un PDF caricato.
+ */
+export function sanitizeForDb(value: string): string {
+  // eslint-disable-next-line no-control-regex
+  return value.replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, "");
+}

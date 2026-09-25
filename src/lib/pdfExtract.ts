@@ -1,4 +1,5 @@
 import zlib from "node:zlib";
+import { sanitizeForDb } from "./utils";
 
 // Estrattore di testo da PDF scritto "a mano", senza dipendenze esterne.
 //
@@ -130,12 +131,16 @@ export function extractPdfText(buffer: Buffer): string {
       const text = content.toString("latin1");
       if (/\b(Tj|TJ)\b/.test(text)) texts.push(extractTextFromContentStream(text));
     }
-    return texts
+    const joined = texts
       .join("\n")
       .split("\n")
       .map((l) => l.trim())
       .filter(Boolean)
       .join("\n");
+    // Alcuni PDF usano font con codifica a doppio byte (es. CID/Identity-H):
+    // decodificandoli byte-per-byte come qui possono comparire byte NUL
+    // (0x00) intervallati al testo vero, che Postgres rifiuta a scrittura.
+    return sanitizeForDb(joined);
   } catch {
     return "";
   }
