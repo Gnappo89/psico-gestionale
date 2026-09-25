@@ -24,6 +24,9 @@ export async function updateStudioSettingsAction(formData: FormData) {
       coefficienteRedditivita: parsePercent(formData.get("coefficienteRedditivita")),
       aliquotaImposta: parsePercent(formData.get("aliquotaImposta")),
       aliquotaContributi: parsePercent(formData.get("aliquotaContributi")),
+      conservazioneAbilitata: formData.get("conservazioneAbilitata") === "on",
+      conservazioneClasseDocumentale:
+        String(formData.get("conservazioneClasseDocumentale") || "").trim() || "ll_lg_fattu",
     },
     update: {
       nomeStudio: String(formData.get("nomeStudio") || "").trim(),
@@ -36,6 +39,9 @@ export async function updateStudioSettingsAction(formData: FormData) {
       coefficienteRedditivita: parsePercent(formData.get("coefficienteRedditivita")),
       aliquotaImposta: parsePercent(formData.get("aliquotaImposta")),
       aliquotaContributi: parsePercent(formData.get("aliquotaContributi")),
+      conservazioneAbilitata: formData.get("conservazioneAbilitata") === "on",
+      conservazioneClasseDocumentale:
+        String(formData.get("conservazioneClasseDocumentale") || "").trim() || "ll_lg_fattu",
     },
   });
 

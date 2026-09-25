@@ -1,6 +1,7 @@
 import { getStudioSettings } from "@/lib/settings";
 import { updateStudioSettingsAction } from "./actions";
 import { isMailConfigured } from "@/lib/mail";
+import { isConservazioneConfigured } from "@/lib/conservazione";
 import { HiOutlineCheckCircle, HiOutlineExclamationCircle } from "react-icons/hi";
 
 export const dynamic = "force-dynamic";
@@ -12,6 +13,7 @@ export default async function ImpostazioniPage({
 }) {
   const settings = await getStudioSettings();
   const mailOk = isMailConfigured();
+  const conservazioneOk = isConservazioneConfigured();
 
   return (
     <div className="py-6 md:py-8 space-y-6 max-w-2xl">
@@ -41,6 +43,27 @@ export default async function ImpostazioniPage({
               <span className="text-coral-600">
                 Invio email non configurato — imposta GMAIL_USER e GMAIL_APP_PASSWORD tra le
                 variabili d&apos;ambiente del progetto su Railway.
+              </span>
+            </>
+          )}
+        </div>
+      </div>
+
+      <div className="card">
+        <div className="flex items-center gap-2 text-sm font-medium">
+          {conservazioneOk ? (
+            <>
+              <HiOutlineCheckCircle className="h-5 w-5 text-mint-600" />
+              <span className="text-mint-700">Conservazione digitale (LegalDoc) configurata</span>
+            </>
+          ) : (
+            <>
+              <HiOutlineExclamationCircle className="h-5 w-5 text-coral-500" />
+              <span className="text-coral-600">
+                Conservazione digitale non configurata — imposta LEGALDOC_BASE_URL e
+                LEGALDOC_API_KEY tra le variabili d&apos;ambiente del progetto su Railway (li
+                trovi nella Scheda Dati Tecnici fornita da InfoCert quando attivi il contratto
+                LegalDoc).
               </span>
             </>
           )}
@@ -189,6 +212,42 @@ export default async function ImpostazioniPage({
                 className="input"
               />
             </div>
+          </div>
+        </div>
+
+        <div className="pt-4 border-t border-slate-100">
+          <h2 className="font-bold text-slate-800 mb-1">Conservazione digitale a norma</h2>
+          <p className="text-xs text-slate-400 mb-4">
+            Se attiva, ogni fattura segnata come pagata viene inviata automaticamente in
+            conservazione sostitutiva (es. InfoCert LegalDoc). Richiede un contratto attivo e le
+            credenziali configurate su Railway (vedi sopra).
+          </p>
+          <div className="flex items-start gap-3 mb-5">
+            <input
+              id="conservazioneAbilitata"
+              name="conservazioneAbilitata"
+              type="checkbox"
+              defaultChecked={settings.conservazioneAbilitata}
+              className="mt-1 h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-400"
+            />
+            <label className="text-sm text-slate-600" htmlFor="conservazioneAbilitata">
+              Invia automaticamente in conservazione le fatture pagate
+            </label>
+          </div>
+          <div>
+            <label className="label" htmlFor="conservazioneClasseDocumentale">
+              Classe documentale LegalDoc
+            </label>
+            <input
+              id="conservazioneClasseDocumentale"
+              name="conservazioneClasseDocumentale"
+              defaultValue={settings.conservazioneClasseDocumentale}
+              className="input"
+            />
+            <p className="text-xs text-slate-400 mt-1.5">
+              Per LegalDoc Lite la classe standard per le fatture è{" "}
+              <code className="text-slate-500">ll_lg_fattu</code>.
+            </p>
           </div>
         </div>
 
